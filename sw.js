@@ -1,5 +1,5 @@
 /* 일기장 서비스워커: 한 번 열어 두면 인터넷 없이도 열려요. 일기 데이터는 건드리지 않고 화면·그림 파일만 보관해요. */
-const CACHE = "diary-v1";
+const CACHE = "diary-v2";
 const STICKERS = [
  "./stickers/blob/life-book.png",
  "./stickers/blob/life-coffee.png",
