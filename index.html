@@ -95,9 +95,12 @@ img.stk{display:block;width:100%;height:100%;object-fit:contain;-webkit-user-dra
 .moods button .im{display:block;width:100%;aspect-ratio:1}
 .moods button:not(.on){opacity:.55}
 .canvas{position:relative}
-.layer{position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:10px}
+.layer{position:absolute;inset:0;pointer-events:none;border-radius:10px}
 .fs{position:absolute;pointer-events:auto;touch-action:none;cursor:grab;filter:drop-shadow(0 1px 2px rgba(0,0,0,.18))}
 .fs.sel{outline:2px dashed var(--accent);outline-offset:2px;border-radius:8px}
+.fs .hdl{display:none;position:absolute;right:-4px;bottom:-4px;width:26px;height:26px;border-radius:50%;background:var(--accent);border:2px solid var(--card);cursor:nwse-resize;touch-action:none;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.fs .hdl::after{content:"⤡";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--accent-text);font-size:14px;line-height:1}
+.fs.sel .hdl{display:block}
 .fs .star{position:absolute;top:-8px;left:-8px;font-size:16px}
 .stbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;padding:8px;background:var(--card);border-radius:10px;border:1px solid var(--line)}
 .stbar[hidden]{display:none}
@@ -325,11 +328,13 @@ function renderEditor() {
       <div class="stbar" id="stbar" hidden>
         <button class="btn" id="smin" aria-label="작게">－ 작게</button>
         <button class="btn" id="splus" aria-label="크게">＋ 크게</button>
+        <button class="btn" id="srl" aria-label="왼쪽으로 돌리기">↺</button>
+        <button class="btn" id="srr" aria-label="오른쪽으로 돌리기">↻</button>
         <button class="btn" id="scover">⭐ 대표로</button>
         <button class="btn danger" id="sdel">떼기</button>
         <button class="btn" id="sdone">선택 해제</button>
       </div>
-      <div class="date-line" style="margin-top:12px">스티커 붙이기 <span class="hint">(누르면 일기에 붙어요. 끌어서 옮기세요)</span></div>
+      <div class="date-line" style="margin-top:12px">스티커 붙이기 <span class="hint">(누르면 붙어요. 끌어서 옮기고, 두 손가락으로 크기·회전)</span></div>
       <div class="tray" id="tray">${TRAY.map(([id, n]) => `<button data-id="${id}" aria-label="${n} 스티커 붙이기">${stkImg(id, n, e.set)}</button>`).join("")}</div>
       <div class="photos" id="photos"></div>
       <div class="bar">
@@ -369,32 +374,75 @@ function renderEditor() {
   const canvas = $("#canvas", el), layer = $("#layer", el), stbar = $("#stbar", el);
   let sel = -1;
   const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+  const MIN_S = 0.08, MAX_S = 0.6;
+  const normDeg = (d) => { d = ((d + 180) % 360 + 360) % 360 - 180; return Math.abs(d) < 3 ? 0 : Math.round(d * 10) / 10; }; // 거의 똑바르면 0도로 붙임
   const place = (n, s) => {
     const W = canvas.clientWidth || 1, H = canvas.clientHeight || 1;
     n.style.width = s.s * 100 + "%";
     n.style.left = clamp(s.x, 0, 1 - s.s) * 100 + "%";
     n.style.top = clamp(s.y, 0, Math.max(0, H / W - s.s)) * W + "px";
+    n.style.transform = s.r ? `rotate(${s.r}deg)` : "";
   };
   const drawStickers = () => {
     layer.innerHTML = "";
     e.stickers = e.stickers.filter((s) => STK_IDS.has(s.id));
     e.stickers.forEach((s, i) => {
-      const n = h(`<div class="fs${i === sel ? " sel" : ""}" role="img" aria-label="스티커">${stkImg(s.id, "", e.set)}${e.cover === s.id ? '<span class="star">⭐</span>' : ""}</div>`);
+      const n = h(`<div class="fs${i === sel ? " sel" : ""}" role="img" aria-label="스티커">${stkImg(s.id, "", e.set)}${e.cover === s.id ? '<span class="star">⭐</span>' : ""}<span class="hdl" aria-label="끌어서 크기·회전"></span></div>`);
       n.style.aspectRatio = "1";
       place(n, s);
+      /* 한 손가락: 옮기기 / 두 손가락: 크기 + 회전 + 옮기기 (한 스티커에 닿은 손가락들을 함께 추적) */
+      const ptrs = new Map(); let base = null;
+      const snap = () => {
+        const a = [...ptrs.values()], o = { x: s.x, y: s.y, s: s.s, r: s.r || 0 };
+        if (a.length === 1) { o.px = a[0].x; o.py = a[0].y; }
+        else if (a.length >= 2) {
+          o.dist = Math.hypot(a[1].x - a[0].x, a[1].y - a[0].y) || 1; o.ang = Math.atan2(a[1].y - a[0].y, a[1].x - a[0].x);
+          o.px = (a[0].x + a[1].x) / 2; o.py = (a[0].y + a[1].y) / 2;
+        }
+        return o;
+      };
       n.onpointerdown = (ev) => {
-        ev.preventDefault(); sel = i;
-        layer.querySelectorAll(".fs").forEach((x, j) => x.classList.toggle("sel", j === i));
-        syncBar();
-        const W = canvas.clientWidth, H = canvas.clientHeight;
-        const sx = ev.clientX, sy = ev.clientY, ox = s.x, oy = s.y;
-        n.setPointerCapture(ev.pointerId);
-        n.onpointermove = (m) => {
-          s.x = clamp(ox + (m.clientX - sx) / W, 0, 1 - s.s);
-          s.y = clamp(oy + (m.clientY - sy) / W, 0, Math.max(0, H / W - s.s));
-          place(n, s); st.textContent = "입력 중…";
+        ev.preventDefault();
+        if (sel !== i) { sel = i; layer.querySelectorAll(".fs").forEach((x, j) => x.classList.toggle("sel", j === i)); syncBar(); }
+        ptrs.set(ev.pointerId, { x: ev.clientX, y: ev.clientY }); n.setPointerCapture(ev.pointerId); base = snap();
+      };
+      n.onpointermove = (m) => {
+        if (!ptrs.has(m.pointerId)) return;
+        ptrs.set(m.pointerId, { x: m.clientX, y: m.clientY });
+        const W = canvas.clientWidth, H = canvas.clientHeight, maxY = (ns) => Math.max(0, H / W - ns);
+        if (ptrs.size === 1) {
+          const p = [...ptrs.values()][0];
+          s.x = clamp(base.x + (p.x - base.px) / W, 0, 1 - s.s);
+          s.y = clamp(base.y + (p.y - base.py) / W, 0, maxY(s.s));
+        } else {
+          const a = [...ptrs.values()], d = Math.hypot(a[1].x - a[0].x, a[1].y - a[0].y) || 1, ang = Math.atan2(a[1].y - a[0].y, a[1].x - a[0].x);
+          const mx = (a[0].x + a[1].x) / 2, my = (a[0].y + a[1].y) / 2;
+          const ns = clamp(base.s * d / base.dist, MIN_S, MAX_S);
+          const cx = base.x + base.s / 2 + (mx - base.px) / W, cy = base.y + base.s / 2 + (my - base.py) / W;
+          s.s = ns; s.x = clamp(cx - ns / 2, 0, 1 - ns); s.y = clamp(cy - ns / 2, 0, maxY(ns));
+          s.r = normDeg(base.r + (ang - base.ang) * 180 / Math.PI);
+          n.style.aspectRatio = "1";
+        }
+        place(n, s); st.textContent = "입력 중…";
+      };
+      n.onpointerup = n.onpointercancel = (u) => {
+        ptrs.delete(u.pointerId);
+        if (ptrs.size) base = snap(); else { base = null; persist(); }
+      };
+      /* 모서리 손잡이: 끌면 크기와 회전이 함께 바뀜 (마우스에서도 가능) */
+      const hdl = $(".hdl", n);
+      hdl.onpointerdown = (ev) => {
+        ev.preventDefault(); ev.stopPropagation(); hdl.setPointerCapture(ev.pointerId);
+        const r = n.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        const d0 = Math.hypot(ev.clientX - cx, ev.clientY - cy) || 1, a0 = Math.atan2(ev.clientY - cy, ev.clientX - cx);
+        const o = { x: s.x, y: s.y, s: s.s, r: s.r || 0 }, W = canvas.clientWidth, H = canvas.clientHeight;
+        hdl.onpointermove = (m) => {
+          const d = Math.hypot(m.clientX - cx, m.clientY - cy) || 1, a = Math.atan2(m.clientY - cy, m.clientX - cx);
+          const ns = clamp(o.s * d / d0, MIN_S, MAX_S), mx = o.x + o.s / 2, my = o.y + o.s / 2;
+          s.s = ns; s.x = clamp(mx - ns / 2, 0, 1 - ns); s.y = clamp(my - ns / 2, 0, Math.max(0, H / W - ns));
+          s.r = normDeg(o.r + (a - a0) * 180 / Math.PI); place(n, s); st.textContent = "입력 중…";
         };
-        n.onpointerup = n.onpointercancel = () => { n.onpointermove = n.onpointerup = n.onpointercancel = null; persist(); };
+        hdl.onpointerup = hdl.onpointercancel = () => { hdl.onpointermove = hdl.onpointerup = hdl.onpointercancel = null; persist(); };
       };
       layer.append(n);
     });
@@ -411,6 +459,9 @@ function renderEditor() {
     drawStickers(); persist();
   };
   $("#cset", el).onchange = (ev) => { e.set = ev.target.value; persist().then(render); };
+  const rotate = (d) => { const s = e.stickers[sel]; if (!s) return; s.r = normDeg((s.r || 0) + d); drawStickers(); persist(); };
+  $("#srl", el).onclick = () => rotate(-15);
+  $("#srr", el).onclick = () => rotate(15);
   $("#smin", el).onclick = () => resize(-0.04);
   $("#splus", el).onclick = () => resize(0.04);
   $("#scover", el).onclick = () => {
@@ -520,7 +571,7 @@ async function importBackup(file) {
       set: SET_IDS.has(e.set) ? e.set : "blob",
       cover: STK_IDS.has(e.cover) ? e.cover : "",
       stickers: (Array.isArray(e.stickers) ? e.stickers : []).filter((s) => s && STK_IDS.has(s.id)).slice(0, MAX_STICKERS)
-        .map((s) => ({ id: s.id, x: Number(s.x) || 0, y: Number(s.y) || 0, s: Math.min(0.6, Math.max(0.08, Number(s.s) || 0.22)) })) }));
+        .map((s) => ({ id: s.id, x: Number(s.x) || 0, y: Number(s.y) || 0, s: Math.min(0.6, Math.max(0.08, Number(s.s) || 0.22)), r: Math.max(-180, Math.min(180, Number(s.r) || 0)) })) }));
   const dates = entries.map((e) => e.date).sort();
   const photoN = entries.reduce((n, e) => n + e.photos.length, 0);
   const cur = new Set((await dbAll()).map((e) => e.date));
