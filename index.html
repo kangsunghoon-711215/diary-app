@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>일기장</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#4a7c59">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+:root{
+  --bg:#faf8f4;--card:#fff;--text:#2b2a28;--sub:#8a857d;--line:#e8e3da;--accent:#4a7c59;--accent-text:#fff;--danger:#c0492f;
+  --m1:#d8806f;--m2:#e8b46a;--m3:#d9d37a;--m4:#8fc08a;--m5:#5aa6a0;
+}
+:root[data-theme="dark"]{
+  --bg:#181816;--card:#232321;--text:#ecebe6;--sub:#9a968d;--line:#35332f;--accent:#7bb58a;--accent-text:#12130f;--danger:#e0735b;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--text);font:16px/1.6 -apple-system,"Malgun Gothic","Apple SD Gothic Neo",sans-serif}
+button{font:inherit;color:inherit;cursor:pointer}
+#app{max-width:640px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;padding-bottom:64px}
+header.top{display:flex;align-items:center;gap:8px;padding:14px 16px;position:sticky;top:0;background:var(--bg);z-index:5}
+header.top h1{font-size:18px;margin:0;flex:1}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 14px}
+.btn.primary{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+.btn.danger{color:var(--danger)}
+.icon{border:0;background:none;font-size:20px;padding:6px 10px}
+main{padding:0 16px 24px;flex:1}
+nav.tabs{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom)}
+nav.tabs .in{display:flex;width:100%;max-width:640px}
+nav.tabs button{flex:1;border:0;background:none;padding:10px 0;font-size:12px;color:var(--sub)}
+nav.tabs button b{display:block;font-size:20px;font-weight:400}
+nav.tabs button.on{color:var(--accent)}
+.banner{background:#fff3d6;color:#6b4e00;border-radius:10px;padding:10px 14px;margin:0 0 12px;font-size:14px;display:flex;gap:8px;align-items:center}
+:root[data-theme="dark"] .banner{background:#3a3220;color:#f0d9a0}
+.banner button{margin-left:auto}
+/* calendar */
+.cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.cal-head h2{margin:0;font-size:18px}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.dow{text-align:center;font-size:12px;color:var(--sub);padding:4px 0}
+.dow:first-child,.day.sun{color:var(--danger)}
+.day{aspect-ratio:1;border:1px solid transparent;border-radius:10px;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:14px;position:relative}
+.day.empty{background:none}
+.day.today{border-color:var(--accent);font-weight:700}
+.day .dot{width:8px;height:8px;border-radius:50%;margin-top:2px;background:var(--sub)}
+.day .dot.m1{background:var(--m1)}.day .dot.m2{background:var(--m2)}.day .dot.m3{background:var(--m3)}.day .dot.m4{background:var(--m4)}.day .dot.m5{background:var(--m5)}
+/* list */
+.item{background:var(--card);border-radius:12px;padding:12px 14px;margin-bottom:10px;display:flex;gap:12px;cursor:pointer}
+.item .mood{font-size:26px}
+.item .t{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .d{font-size:13px;color:var(--sub)}
+.item .p{font-size:14px;color:var(--sub);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.item .body{flex:1;min-width:0}
+.empty-msg{text-align:center;color:var(--sub);padding:48px 0}
+/* editor */
+.date-line{font-size:15px;color:var(--sub);margin-bottom:8px}
+.moods{display:flex;gap:8px;margin:8px 0 12px}
+.moods button{flex:1;font-size:28px;background:var(--card);border:2px solid transparent;border-radius:12px;padding:6px 0}
+.moods button.on{border-color:var(--accent)}
+input.title,textarea.body,input.search,input.field{width:100%;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:10px;padding:10px 12px;font:inherit}
+input.title{font-size:18px;font-weight:600;margin-bottom:8px}
+textarea.body{min-height:240px;resize:vertical;line-height:1.8}
+.photos{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.photos .ph{position:relative;width:96px;height:96px}
+.photos img{width:100%;height:100%;object-fit:cover;border-radius:10px}
+.photos .x{position:absolute;top:-6px;right:-6px;width:24px;height:24px;border-radius:50%;border:0;background:var(--danger);color:#fff;font-size:14px;line-height:24px;padding:0}
+.bar{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
+.status{font-size:13px;color:var(--sub);margin-left:auto}
+/* settings */
+.sec{background:var(--card);border-radius:12px;padding:14px;margin-bottom:12px}
+.sec h3{margin:0 0 8px;font-size:15px}
+.row{display:flex;align-items:center;gap:8px;margin:8px 0;flex-wrap:wrap}
+.row label{flex:1;min-width:120px}
+select{font:inherit;background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+.hint{font-size:13px;color:var(--sub)}
+/* lock + modal */
+.overlay{position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px}
+.overlay.modal{background:rgba(0,0,0,.5)}
+.dialog{background:var(--card);border-radius:14px;padding:20px;max-width:420px;width:100%}
+.pin-dots{display:flex;gap:12px;height:20px}
+.pin-dots i{width:14px;height:14px;border-radius:50%;border:2px solid var(--sub)}
+.pin-dots i.f{background:var(--text);border-color:var(--text)}
+.pad{display:grid;grid-template-columns:repeat(3,72px);gap:12px}
+.pad button{height:64px;border-radius:50%;border:1px solid var(--line);background:var(--card);font-size:22px}
+.err{color:var(--danger);min-height:22px;font-size:14px}
+mark{background:#ffe38a;color:#000;border-radius:3px}
+/* 스티커 */
+img.stk{display:block;width:100%;height:100%;object-fit:contain;-webkit-user-drag:none;user-select:none}
+.day .cv{width:70%;aspect-ratio:1;display:block}
+.item .mood{width:44px;height:44px;flex:none;font-size:26px;display:flex;align-items:center;justify-content:center}
+.moods button{padding:4px}
+.moods button .im{display:block;width:100%;aspect-ratio:1}
+.moods button:not(.on){opacity:.55}
+.canvas{position:relative}
+.layer{position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:10px}
+.fs{position:absolute;pointer-events:auto;touch-action:none;cursor:grab;filter:drop-shadow(0 1px 2px rgba(0,0,0,.18))}
+.fs.sel{outline:2px dashed var(--accent);outline-offset:2px;border-radius:8px}
+.fs .star{position:absolute;top:-8px;left:-8px;font-size:16px}
+.stbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;padding:8px;background:var(--card);border-radius:10px;border:1px solid var(--line)}
+.stbar[hidden]{display:none}
+.tray{display:flex;gap:6px;overflow-x:auto;padding:8px 2px;margin-top:8px;-webkit-overflow-scrolling:touch}
+.tray button{flex:none;width:52px;height:52px;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:4px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+"use strict";
+/* ---------- 저장소 (IndexedDB: 일기 / localStorage: 설정) ---------- */
+const DB_NAME = "diary-app", STORE = "entries";
+let db;
+function openDB() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(DB_NAME, 1);
+    r.onupgradeneeded = () => r.result.createObjectStore(STORE, { keyPath: "date" });
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+const tx = (mode) => db.transaction(STORE, mode).objectStore(STORE);
+const req = (r) => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+const dbAll = () => req(tx("readonly").getAll());
+const dbGet = (d) => req(tx("readonly").get(d));
+const dbPut = (e) => req(tx("readwrite").put(e));
+const dbDel = (d) => req(tx("readwrite").delete(d));
+const dbClear = () => req(tx("readwrite").clear());
+
+const DEFAULTS = { charSet: "duck", home: "calendar", theme: "auto", lockMode: "close", pinHash: null, pinSalt: null, lastBackup: null };
+function loadSettings() {
+  try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem("diary-settings") || "{}") }; }
+  catch { return { ...DEFAULTS }; }
+}
+let S = loadSettings();
+function saveSettings() { try { localStorage.setItem("diary-settings", JSON.stringify(S)); } catch {} }
+
+/* ---------- 유틸 ---------- */
+const DOW = ["일", "월", "화", "수", "목", "금", "토"];
+const MOODS = ["😢", "😕", "😐", "🙂", "😄"]; // 1~5 (스티커 이미지를 못 불러올 때 대체용)
+const MOOD_NAMES = ["매우 나쁨", "나쁨", "보통", "좋음", "매우 좋음"];
+const LIFE = [["coffee", "커피"], ["book", "책"], ["rain", "비"], ["exercise", "운동"], ["food", "음식"], ["travel", "여행"], ["heart", "하트"]];
+const TRAY = [...MOOD_NAMES.map((n, i) => [`mood-${i + 1}`, n]), ...LIFE.map(([k, n]) => [`life-${k}`, n])];
+const STK_IDS = new Set(TRAY.map((t) => t[0]));
+const SETS = [["duck", "병아리"], ["penguin", "펭귄"], ["owl", "올빼미(수채화)"], ["blobwc", "노랑 동글이(수채화)"], ["blob", "노랑 동글이(만화풍)"]];
+const SET_IDS = new Set(SETS.map((s) => s[0]));
+const setOf = (e) => (SET_IDS.has(e.set) ? e.set : "blob"); // 캐릭터 기능 이전에 쓴 일기는 노랑 동글이
+const stkImg = (id, alt = "", set = "blob") => `<img class="stk" src="stickers/${set}/${id}.png" alt="${esc(alt)}" draggable="false">`;
+const coverOf = (e) => (e.cover && STK_IDS.has(e.cover) ? e.cover : e.mood ? `mood-${e.mood}` : null);
+const MAX_STICKERS = 30;
+const pad2 = (n) => String(n).padStart(2, "0");
+const ymd = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const parseYmd = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+const fmtLong = (s) => { const d = parseYmd(s); return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 ${DOW[d.getDay()]}요일`; };
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const $ = (sel, el = document) => el.querySelector(sel);
+const h = (html) => { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstChild; };
+const isBlank = (e) => !e.title.trim() && !e.body.trim() && !e.mood && !e.cover && !(e.photos || []).length && !(e.stickers || []).length;
+
+function applyTheme() {
+  const dark = S.theme === "dark" || (S.theme === "auto" && matchMedia("(prefers-color-scheme: dark)").matches);
+  document.documentElement.dataset.theme = dark ? "dark" : "light";
+}
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
+
+async function sha(text) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/* 사진: 긴 변 1600px JPEG로 줄여서 저장 (용량 절약) */
+function resizeImage(file, max = 1600) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      res(c.toDataURL("image/jpeg", 0.85));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error("사진을 읽을 수 없어요")); };
+    img.src = url;
+  });
+}
+
+/* ---------- 화면 상태 ---------- */
+const state = { tab: "home", view: S.home, month: new Date(), editing: null, query: "" };
+const app = $("#app");
+
+function render() {
+  app.innerHTML = "";
+  if (state.tab === "edit") return renderEditor();
+  const tabs = h(`<nav class="tabs"><div class="in">
+    <button data-t="home"><b>📅</b>홈</button>
+    <button data-t="search"><b>🔍</b>검색</button>
+    <button data-t="settings"><b>⚙️</b>설정</button></div></nav>`);
+  tabs.querySelectorAll("button").forEach((b) => {
+    if (b.dataset.t === state.tab) b.classList.add("on");
+    b.onclick = () => { state.tab = b.dataset.t; render(); };
+  });
+  const fn = { home: renderHome, search: renderSearch, settings: renderSettings }[state.tab];
+  fn().then(() => app.appendChild(tabs));
+}
+
+/* ---------- 홈 (캘린더 / 목록) ---------- */
+async function renderHome() {
+  const all = (await dbAll()).filter((e) => !isBlank(e)).sort((a, b) => b.date.localeCompare(a.date));
+  const top = h(`<header class="top"><h1>일기장</h1>
+    <button class="btn" id="vt">${state.view === "calendar" ? "목록 보기" : "달력 보기"}</button>
+    <button class="btn primary" id="today">오늘 쓰기</button></header>`);
+  $("#vt", top).onclick = () => { state.view = state.view === "calendar" ? "list" : "calendar"; render(); };
+  $("#today", top).onclick = () => openEditor(ymd(new Date()));
+  app.append(top);
+  const main = h(`<main></main>`);
+  app.append(main);
+
+  const warn = backupWarning(all.length);
+  if (warn) main.append(warn);
+
+  if (state.view === "calendar") drawCalendar(main, all);
+  else drawList(main, all);
+}
+
+function backupWarning(count) {
+  if (!count) return null;
+  let msg = null;
+  if (!S.lastBackup) msg = "아직 백업한 적이 없어요. 폰을 바꾸거나 브라우저 데이터를 지우면 일기가 사라질 수 있어요.";
+  else {
+    const days = Math.floor((Date.now() - S.lastBackup) / 86400000);
+    if (days >= 7) msg = `마지막 백업이 ${days}일 전이에요.`;
+  }
+  if (!msg) return null;
+  const el = h(`<div class="banner"><span>⚠️ ${esc(msg)}</span><button class="btn primary">지금 백업</button></div>`);
+  $("button", el).onclick = () => exportBackup();
+  return el;
+}
+
+function drawCalendar(main, all) {
+  const byDate = Object.fromEntries(all.map((e) => [e.date, e]));
+  const y = state.month.getFullYear(), m = state.month.getMonth();
+  const first = new Date(y, m, 1).getDay(), last = new Date(y, m + 1, 0).getDate();
+  const todayS = ymd(new Date());
+  let cells = DOW.map((d) => `<div class="dow">${d}</div>`).join("");
+  for (let i = 0; i < first; i++) cells += `<div class="day empty"></div>`;
+  for (let d = 1; d <= last; d++) {
+    const s = `${y}-${pad2(m + 1)}-${pad2(d)}`, e = byDate[s];
+    const sun = (first + d - 1) % 7 === 0 ? " sun" : "";
+    const cv = e && coverOf(e);
+    cells += `<button class="day${sun}${s === todayS ? " today" : ""}" data-d="${s}">${d}${e ? (cv ? `<span class="cv">${stkImg(cv, "", setOf(e))}</span>` : `<span class="dot"></span>`) : ""}</button>`;
+  }
+  const cal = h(`<div><div class="cal-head"><button class="icon" id="pm">◀</button>
+    <h2>${y}년 ${m + 1}월</h2><button class="icon" id="nm">▶</button></div><div class="grid">${cells}</div>
+    <p class="hint" style="margin-top:12px">쓴 날에는 그날의 대표 스티커가 붙어요. (스티커를 안 골랐으면 회색 점)</p></div>`);
+  $("#pm", cal).onclick = () => { state.month = new Date(y, m - 1, 1); render(); };
+  $("#nm", cal).onclick = () => { state.month = new Date(y, m + 1, 1); render(); };
+  cal.querySelectorAll(".day[data-d]").forEach((b) => (b.onclick = () => openEditor(b.dataset.d)));
+  main.append(cal);
+}
+
+function itemHTML(e, q = "") {
+  const hl = (t) => {
+    const x = esc(t);
+    if (!q) return x;
+    const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/&/g, "&amp;"), "gi");
+    return x.replace(re, (mm) => `<mark>${mm}</mark>`);
+  };
+  const cv = coverOf(e);
+  return `<div class="item" data-d="${e.date}"><div class="mood">${cv ? stkImg(cv, "", setOf(e)) : "📝"}</div>
+    <div class="body"><div class="d">${fmtLong(e.date)}${(e.photos || []).length ? " · 📷" + e.photos.length : ""}</div>
+    <div class="t">${hl(e.title || "(제목 없음)")}</div><div class="p">${hl(e.body.slice(0, 160))}</div></div></div>`;
+}
+function bindItems(root) { root.querySelectorAll(".item").forEach((el) => (el.onclick = () => openEditor(el.dataset.d))); }
+
+function drawList(main, all) {
+  if (!all.length) { main.append(h(`<div class="empty-msg">아직 일기가 없어요.<br>오른쪽 위 '오늘 쓰기'를 눌러 보세요.</div>`)); return; }
+  const box = h(`<div>${all.map((e) => itemHTML(e)).join("")}</div>`);
+  bindItems(box); main.append(box);
+}
+
+/* ---------- 검색 ---------- */
+async function renderSearch() {
+  app.append(h(`<header class="top"><h1>검색</h1></header>`));
+  const main = h(`<main><input class="search" placeholder="제목·본문 검색 (예: 여행, #운동)" value="${esc(state.query)}"><div id="res" style="margin-top:12px"></div></main>`);
+  app.append(main);
+  const all = (await dbAll()).filter((e) => !isBlank(e)).sort((a, b) => b.date.localeCompare(a.date));
+  const input = $("input", main), res = $("#res", main);
+  const run = () => {
+    const q = input.value.trim(); state.query = input.value;
+    if (!q) { res.innerHTML = `<p class="hint">제목, 본문, #태그를 찾아 줘요.</p>`; return; }
+    const ql = q.toLowerCase();
+    const hits = all.filter((e) => `${e.title}\n${e.body}`.toLowerCase().includes(ql));
+    res.innerHTML = hits.length ? `<p class="hint">${hits.length}개 찾았어요</p>` + hits.map((e) => itemHTML(e, q)).join("") : `<div class="empty-msg">결과가 없어요.</div>`;
+    bindItems(res);
+  };
+  input.oninput = run; run();
+}
+
+/* ---------- 작성 / 수정 ---------- */
+async function openEditor(date) {
+  const ex = await dbGet(date);
+  const e = ex ? structuredClone(ex) : { date, title: "", body: "", mood: 0, photos: [] };
+  e.set = ex ? setOf(e) : (SET_IDS.has(S.charSet) ? S.charSet : "duck");
+  e.stickers = Array.isArray(e.stickers) ? e.stickers : [];
+  e.cover = e.cover || "";
+  state.editing = { entry: e, original: structuredClone(e), existed: !!ex };
+  state.tab = "edit"; render();
+}
+
+function renderEditor() {
+  const { entry: e, original } = state.editing;
+  const el = h(`<div>
+    <header class="top"><button class="icon" id="back">←</button><h1>${fmtLong(e.date)}</h1></header>
+    <main>
+      <div class="date-line">오늘의 기분
+        <select id="cset" aria-label="스티커 캐릭터" style="float:right">${SETS.map(([k, n]) => `<option value="${k}"${k === e.set ? " selected" : ""}>${n}</option>`).join("")}</select></div>
+      <div class="moods">${MOOD_NAMES.map((n, i) => `<button data-m="${i + 1}" class="${e.mood === i + 1 ? "on" : ""}" aria-label="${n}"><span class="im">${stkImg(`mood-${i + 1}`, n, e.set)}</span></button>`).join("")}</div>
+      <input class="title" placeholder="제목" value="${esc(e.title)}">
+      <div class="canvas" id="canvas">
+        <textarea class="body" placeholder="오늘은 어땠나요? (#태그를 쓰면 검색할 수 있어요)">${esc(e.body)}</textarea>
+        <div class="layer" id="layer"></div>
+      </div>
+      <div class="stbar" id="stbar" hidden>
+        <button class="btn" id="smin" aria-label="작게">－ 작게</button>
+        <button class="btn" id="splus" aria-label="크게">＋ 크게</button>
+        <button class="btn" id="scover">⭐ 대표로</button>
+        <button class="btn danger" id="sdel">떼기</button>
+        <button class="btn" id="sdone">선택 해제</button>
+      </div>
+      <div class="date-line" style="margin-top:12px">스티커 붙이기 <span class="hint">(누르면 일기에 붙어요. 끌어서 옮기세요)</span></div>
+      <div class="tray" id="tray">${TRAY.map(([id, n]) => `<button data-id="${id}" aria-label="${n} 스티커 붙이기">${stkImg(id, n, e.set)}</button>`).join("")}</div>
+      <div class="photos" id="photos"></div>
+      <div class="bar">
+        <button class="btn" id="addph">📷 사진 추가</button>
+        <input type="file" id="file" accept="image/*" multiple hidden>
+        <span class="status" id="st">자동 저장돼요</span>
+      </div>
+      <div class="bar">
+        <button class="btn primary" id="done">완료</button>
+        <button class="btn" id="revert">처음 상태로 되돌리기</button>
+        <button class="btn danger" id="del">삭제</button>
+      </div>
+    </main></div>`);
+  app.append(el);
+
+  const st = $("#st", el);
+  let timer, saving = Promise.resolve();
+  const persist = () => {
+    clearTimeout(timer);
+    saving = saving.then(async () => {
+      if (isBlank(e)) await dbDel(e.date); else await dbPut(e);
+      st.textContent = "저장됨 ✓ " + new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
+    }).catch(() => { st.textContent = "⚠️ 저장 실패 — 저장 공간을 확인해 주세요"; });
+    return saving;
+  };
+  const schedule = () => { st.textContent = "입력 중…"; clearTimeout(timer); timer = setTimeout(persist, 600); };
+
+  $(".title", el).oninput = (ev) => { e.title = ev.target.value; schedule(); };
+  $(".body", el).oninput = (ev) => { e.body = ev.target.value; schedule(); };
+  el.querySelectorAll(".moods button").forEach((b) => (b.onclick = () => {
+    const v = Number(b.dataset.m); e.mood = e.mood === v ? 0 : v;
+    el.querySelectorAll(".moods button").forEach((x) => x.classList.toggle("on", Number(x.dataset.m) === e.mood));
+    persist();
+  }));
+
+  /* 자유 스티커: x,y,s 는 판 너비에 대한 비율 (화면 크기가 달라도 같은 자리에 와요) */
+  const canvas = $("#canvas", el), layer = $("#layer", el), stbar = $("#stbar", el);
+  let sel = -1;
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+  const place = (n, s) => {
+    const W = canvas.clientWidth || 1, H = canvas.clientHeight || 1;
+    n.style.width = s.s * 100 + "%";
+    n.style.left = clamp(s.x, 0, 1 - s.s) * 100 + "%";
+    n.style.top = clamp(s.y, 0, Math.max(0, H / W - s.s)) * W + "px";
+  };
+  const drawStickers = () => {
+    layer.innerHTML = "";
+    e.stickers = e.stickers.filter((s) => STK_IDS.has(s.id));
+    e.stickers.forEach((s, i) => {
+      const n = h(`<div class="fs${i === sel ? " sel" : ""}" role="img" aria-label="스티커">${stkImg(s.id, "", e.set)}${e.cover === s.id ? '<span class="star">⭐</span>' : ""}</div>`);
+      n.style.aspectRatio = "1";
+      place(n, s);
+      n.onpointerdown = (ev) => {
+        ev.preventDefault(); sel = i;
+        layer.querySelectorAll(".fs").forEach((x, j) => x.classList.toggle("sel", j === i));
+        syncBar();
+        const W = canvas.clientWidth, H = canvas.clientHeight;
+        const sx = ev.clientX, sy = ev.clientY, ox = s.x, oy = s.y;
+        n.setPointerCapture(ev.pointerId);
+        n.onpointermove = (m) => {
+          s.x = clamp(ox + (m.clientX - sx) / W, 0, 1 - s.s);
+          s.y = clamp(oy + (m.clientY - sy) / W, 0, Math.max(0, H / W - s.s));
+          place(n, s); st.textContent = "입력 중…";
+        };
+        n.onpointerup = n.onpointercancel = () => { n.onpointermove = n.onpointerup = n.onpointercancel = null; persist(); };
+      };
+      layer.append(n);
+    });
+  };
+  const syncBar = () => {
+    const s = e.stickers[sel];
+    stbar.hidden = !s;
+    if (s) $("#scover", el).textContent = e.cover === s.id ? "⭐ 대표 해제" : "⭐ 대표로";
+  };
+  const resize = (d) => {
+    const s = e.stickers[sel]; if (!s) return;
+    const ns = clamp(s.s + d, 0.08, 0.6), cx = s.x + s.s / 2, cy = s.y + s.s / 2;
+    s.s = ns; s.x = clamp(cx - ns / 2, 0, 1 - ns); s.y = Math.max(0, cy - ns / 2);
+    drawStickers(); persist();
+  };
+  $("#cset", el).onchange = (ev) => { e.set = ev.target.value; persist().then(render); };
+  $("#smin", el).onclick = () => resize(-0.04);
+  $("#splus", el).onclick = () => resize(0.04);
+  $("#scover", el).onclick = () => {
+    const s = e.stickers[sel]; if (!s) return;
+    e.cover = e.cover === s.id ? "" : s.id; drawStickers(); syncBar(); persist();
+  };
+  $("#sdel", el).onclick = () => { if (sel < 0) return; e.stickers.splice(sel, 1); sel = -1; drawStickers(); syncBar(); persist(); };
+  $("#sdone", el).onclick = () => { sel = -1; drawStickers(); syncBar(); };
+  canvas.addEventListener("pointerdown", (ev) => { if (!ev.target.closest(".fs") && sel >= 0) { sel = -1; drawStickers(); syncBar(); } });
+  $("#tray", el).querySelectorAll("button").forEach((b) => (b.onclick = () => {
+    if (e.stickers.length >= MAX_STICKERS) return alert(`스티커는 한 일기에 ${MAX_STICKERS}개까지 붙일 수 있어요.`);
+    const k = e.stickers.length;
+    e.stickers.push({ id: b.dataset.id, x: clamp(0.36 + (k % 4) * 0.04, 0, 0.78), y: 0.04 + (k % 4) * 0.04, s: 0.22 });
+    sel = e.stickers.length - 1; drawStickers(); syncBar(); persist();
+  }));
+  new ResizeObserver(() => layer.querySelectorAll(".fs").forEach((n, i) => place(n, e.stickers[i]))).observe(canvas);
+  drawStickers();
+
+  const drawPhotos = () => {
+    const box = $("#photos", el); box.innerHTML = "";
+    e.photos.forEach((src, i) => {
+      const p = h(`<div class="ph"><img src="${src}" alt="첨부 사진 ${i + 1}"><button class="x" aria-label="사진 삭제">×</button></div>`);
+      $(".x", p).onclick = () => { e.photos.splice(i, 1); drawPhotos(); persist(); };
+      box.append(p);
+    });
+  };
+  drawPhotos();
+  $("#addph", el).onclick = () => $("#file", el).click();
+  $("#file", el).onchange = async (ev) => {
+    st.textContent = "사진 처리 중…";
+    for (const f of ev.target.files) {
+      try { e.photos.push(await resizeImage(f)); } catch (err) { alert(err.message); }
+    }
+    ev.target.value = ""; drawPhotos(); persist();
+  };
+
+  const leave = async () => { await persist(); state.tab = "home"; render(); };
+  $("#back", el).onclick = leave;
+  $("#done", el).onclick = leave;
+  $("#revert", el).onclick = () => {
+    if (!confirm("이 화면을 연 시점의 내용으로 되돌릴까요?")) return;
+    Object.assign(e, structuredClone(original));
+    persist().then(renderEditorAgain);
+  };
+  $("#del", el).onclick = async () => {
+    if (!confirm("이 날의 일기를 삭제할까요? 되돌릴 수 없어요. (백업이 있다면 복원할 수 있어요)")) return;
+    clearTimeout(timer); await saving; await dbDel(e.date); state.tab = "home"; render();
+  };
+}
+function renderEditorAgain() { render(); }
+
+/* ---------- 설정 ---------- */
+async function renderSettings() {
+  app.append(h(`<header class="top"><h1>설정</h1></header>`));
+  const count = (await dbAll()).filter((e) => !isBlank(e)).length;
+  const lastB = S.lastBackup ? new Date(S.lastBackup).toLocaleString("ko-KR") : "없음";
+  const main = h(`<main>
+    <div class="sec"><h3>💾 백업과 복원</h3>
+      <p class="hint">일기 ${count}편 · 마지막 백업: <b>${lastB}</b><br>백업 파일 하나에 사진까지 모두 들어가요.</p>
+      <div class="row"><button class="btn primary" id="exp">백업 파일 저장</button>
+      <button class="btn" id="imp">백업에서 복원</button><input type="file" id="impf" accept=".json,application/json" hidden></div></div>
+    <div class="sec"><h3>🔒 잠금</h3>
+      <div class="row"><label>${S.pinHash ? "PIN이 설정되어 있어요" : "PIN으로 일기를 잠가요"}</label>
+        <button class="btn" id="pin">${S.pinHash ? "PIN 끄기" : "PIN 설정"}</button></div>
+      <div class="row"><label>언제 다시 잠글까요?</label>
+        <select id="lm"><option value="now">다른 화면으로 가면 바로</option><option value="1min">1분 이상 떠나 있으면</option><option value="close">앱(탭)을 닫았을 때만</option></select></div>
+      <p class="hint">PIN을 잊으면 이 브라우저에서는 풀 수 없어요. 백업 파일은 PIN 없이도 복원돼요.</p></div>
+    <div class="sec"><h3>🎨 화면</h3>
+      <div class="row"><label>테마</label><select id="th"><option value="auto">기기 설정 따라가기</option><option value="light">밝게</option><option value="dark">어둡게</option></select></div>
+      <div class="row"><label>스티커 캐릭터<br><span class="hint">새 일기에 쓰여요. 쓰던 일기는 일기 안에서 바꿀 수 있어요.</span></label>
+        <select id="cs">${SETS.map(([k, n]) => `<option value="${k}">${n}</option>`).join("")}</select></div>
+      <div class="row"><label>첫 화면</label><select id="hm"><option value="calendar">달력</option><option value="list">목록</option></select></div></div>
+  </main>`);
+  app.append(main);
+  $("#lm", main).value = S.lockMode; $("#th", main).value = S.theme; $("#hm", main).value = S.home;
+  $("#lm", main).onchange = (ev) => { S.lockMode = ev.target.value; saveSettings(); };
+  $("#th", main).onchange = (ev) => { S.theme = ev.target.value; saveSettings(); applyTheme(); };
+  $("#cs", main).value = S.charSet;
+  $("#cs", main).onchange = (ev) => { S.charSet = ev.target.value; saveSettings(); };
+  $("#hm", main).onchange = (ev) => { S.home = state.view = ev.target.value; saveSettings(); };
+  $("#exp", main).onclick = exportBackup;
+  $("#imp", main).onclick = () => $("#impf", main).click();
+  $("#impf", main).onchange = (ev) => ev.target.files[0] && importBackup(ev.target.files[0]);
+  $("#pin", main).onclick = () => (S.pinHash ? disablePin() : setupPin());
+}
+
+/* ---------- 백업 / 복원 ---------- */
+async function exportBackup() {
+  const entries = (await dbAll()).filter((e) => !isBlank(e));
+  const data = { app: "diary", version: 1, exportedAt: new Date().toISOString(), entries };
+  const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `일기장-백업-${ymd(new Date())}.json`;
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  S.lastBackup = Date.now(); saveSettings();
+  if (state.tab === "home" || state.tab === "settings") render();
+}
+
+async function importBackup(file) {
+  let data;
+  try { data = JSON.parse(await file.text()); } catch { return alert("백업 파일을 읽을 수 없어요. 일기장에서 저장한 .json 파일인지 확인해 주세요."); }
+  if (data.app !== "diary" || !Array.isArray(data.entries)) return alert("일기장 백업 파일이 아니에요.");
+  const entries = data.entries.filter((e) => e && /^\d{4}-\d{2}-\d{2}$/.test(e.date))
+    .map((e) => ({ date: e.date, title: String(e.title || ""), body: String(e.body || ""), mood: Number(e.mood) || 0, photos: Array.isArray(e.photos) ? e.photos : [],
+      set: SET_IDS.has(e.set) ? e.set : "blob",
+      cover: STK_IDS.has(e.cover) ? e.cover : "",
+      stickers: (Array.isArray(e.stickers) ? e.stickers : []).filter((s) => s && STK_IDS.has(s.id)).slice(0, MAX_STICKERS)
+        .map((s) => ({ id: s.id, x: Number(s.x) || 0, y: Number(s.y) || 0, s: Math.min(0.6, Math.max(0.08, Number(s.s) || 0.22)) })) }));
+  const dates = entries.map((e) => e.date).sort();
+  const photoN = entries.reduce((n, e) => n + e.photos.length, 0);
+  const cur = new Set((await dbAll()).map((e) => e.date));
+  const overlap = entries.filter((e) => cur.has(e.date)).length;
+  const ov = h(`<div class="overlay modal"><div class="dialog">
+    <h3 style="margin-top:0">백업 미리보기</h3>
+    <p>일기 <b>${entries.length}편</b> · 사진 <b>${photoN}장</b><br>
+    기간: ${dates[0] || "-"} ~ ${dates[dates.length - 1] || "-"}<br>
+    저장한 날: ${data.exportedAt ? new Date(data.exportedAt).toLocaleString("ko-KR") : "알 수 없음"}<br>
+    지금 있는 일기와 날짜가 겹치는 것: <b>${overlap}편</b></p>
+    <div class="row"><button class="btn primary" id="merge">합치기</button>
+    <button class="btn danger" id="replace">전체 교체</button><button class="btn" id="cancel">취소</button></div>
+    <p class="hint">합치기: 겹치는 날짜는 백업 내용으로 덮어써요. 전체 교체: 지금 일기를 모두 지우고 백업으로 바꿔요.</p></div></div>`);
+  document.body.append(ov);
+  $("#cancel", ov).onclick = () => ov.remove();
+  const apply = async (replace) => {
+    if (replace && !confirm("지금 있는 일기가 모두 지워져요. 계속할까요?")) return;
+    if (replace) await dbClear();
+    for (const e of entries) await dbPut(e);
+    ov.remove(); alert(`${entries.length}편을 복원했어요.`); render();
+  };
+  $("#merge", ov).onclick = () => apply(false);
+  $("#replace", ov).onclick = () => apply(true);
+}
+
+/* ---------- 잠금 ---------- */
+function pinScreen(title, onDone, { cancel } = {}) {
+  let val = "";
+  const ov = h(`<div class="overlay"><h2 style="margin:0">${esc(title)}</h2><div class="pin-dots">${"<i></i>".repeat(4)}</div>
+    <div class="err"></div><div class="pad">${[1,2,3,4,5,6,7,8,9,"",0,"⌫"].map((k) => `<button data-k="${k}" ${k === "" ? "disabled style='visibility:hidden'" : ""}>${k}</button>`).join("")}</div>
+    ${cancel ? `<button class="btn" id="c">취소</button>` : ""}</div>`);
+  const dots = () => ov.querySelectorAll(".pin-dots i").forEach((d, i) => d.classList.toggle("f", i < val.length));
+  const err = (m) => { $(".err", ov).textContent = m; };
+  ov.querySelectorAll(".pad button").forEach((b) => (b.onclick = async () => {
+    const k = b.dataset.k;
+    if (k === "⌫") val = val.slice(0, -1); else if (val.length < 4) val += k;
+    dots(); err("");
+    if (val.length === 4) {
+      const ok = await onDone(val, err);
+      if (ok === true) ov.remove(); else { val = ""; dots(); }
+    }
+  }));
+  if (cancel) $("#c", ov).onclick = () => ov.remove();
+  document.body.append(ov);
+  return ov;
+}
+function lockNow() {
+  if (!S.pinHash || $(".overlay:not(.modal)")) return;
+  try { sessionStorage.removeItem("diary-unlocked"); } catch {}
+  pinScreen("PIN을 입력하세요", async (pin, err) => {
+    if ((await sha(S.pinSalt + pin)) === S.pinHash) { try { sessionStorage.setItem("diary-unlocked", "1"); } catch {} return true; }
+    err("PIN이 맞지 않아요"); return false;
+  });
+}
+function setupPin() {
+  let first = null;
+  pinScreen("새 PIN 4자리", async (pin, err) => {
+    if (first === null) { first = pin; $(".overlay h2").textContent = "한 번 더 입력하세요"; return false; }
+    if (pin !== first) { first = null; $(".overlay h2").textContent = "새 PIN 4자리"; err("두 번 입력이 달라요. 다시 해 주세요"); return false; }
+    S.pinSalt = crypto.getRandomValues(new Uint32Array(4)).join("-");
+    S.pinHash = await sha(S.pinSalt + pin); saveSettings();
+    try { sessionStorage.setItem("diary-unlocked", "1"); } catch {}
+    render(); return true;
+  }, { cancel: true });
+}
+function disablePin() {
+  pinScreen("PIN을 입력하면 해제돼요", async (pin, err) => {
+    if ((await sha(S.pinSalt + pin)) !== S.pinHash) { err("PIN이 맞지 않아요"); return false; }
+    S.pinHash = S.pinSalt = null; saveSettings(); render(); return true;
+  }, { cancel: true });
+}
+let hiddenAt = 0;
+document.addEventListener("visibilitychange", () => {
+  if (!S.pinHash) return;
+  if (document.hidden) { hiddenAt = Date.now(); if (S.lockMode === "now") lockNow(); }
+  else if (S.lockMode === "1min" && Date.now() - hiddenAt > 60000) lockNow();
+});
+
+/* ---------- 시작 ---------- */
+(async function init() {
+  applyTheme();
+  try { navigator.storage?.persist?.(); } catch {}
+  try { if ("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js"); } catch {}
+  try { db = await openDB(); }
+  catch { app.innerHTML = `<main style="padding:24px">이 브라우저에서는 저장소를 열 수 없어요. 시크릿(사생활 보호) 창이 아닌지 확인해 주세요.</main>`; return; }
+  render();
+  let unlocked = false;
+  try { unlocked = sessionStorage.getItem("diary-unlocked") === "1"; } catch {}
+  if (S.pinHash && !unlocked) lockNow();
+})();
+</script>
+</body>
+</html>
