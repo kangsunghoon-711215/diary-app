@@ -158,11 +158,15 @@ const MOODS = ["😢", "😕", "😐", "🙂", "😄"]; // 1~5 (스티커 이미
 const MOOD_NAMES = ["매우 나쁨", "나쁨", "보통", "좋음", "매우 좋음"];
 const LIFE = [["coffee", "커피"], ["book", "책"], ["rain", "비"], ["exercise", "운동"], ["food", "음식"], ["travel", "여행"], ["heart", "하트"]];
 const TRAY = [...MOOD_NAMES.map((n, i) => [`mood-${i + 1}`, n]), ...LIFE.map(([k, n]) => [`life-${k}`, n])];
-const STK_IDS = new Set(TRAY.map((t) => t[0]));
+/* 동글이(수채화·만화풍) 전용 감정 스티커 12종 */
+const EMO = [["excited", "신남"], ["love", "사랑스러움"], ["proud", "뿌듯함"], ["flutter", "설렘"], ["calm", "평온"], ["sleepy", "졸림"], ["lazy", "나른함"], ["angry", "화남"], ["anxious", "불안"], ["lonely", "외로움"], ["tired", "지침"], ["tears", "눈물"]].map(([k, n]) => [`emo-${k}`, n]);
+const EMO_SETS = new Set(["blob", "blobwc"]);
+const trayFor = (set) => (EMO_SETS.has(set) ? [...TRAY, ...EMO] : TRAY);
+const STK_IDS = new Set([...TRAY, ...EMO].map((t) => t[0]));
 const SETS = [["duck", "병아리"], ["penguin", "펭귄"], ["owl", "올빼미(수채화)"], ["blobwc", "노랑 동글이(수채화)"], ["blob", "노랑 동글이(만화풍)"]];
 const SET_IDS = new Set(SETS.map((s) => s[0]));
 const setOf = (e) => (SET_IDS.has(e.set) ? e.set : "blob"); // 캐릭터 기능 이전에 쓴 일기는 노랑 동글이
-const stkImg = (id, alt = "", set = "blob") => `<img class="stk" src="stickers/${set}/${id}.png" alt="${esc(alt)}" draggable="false">`;
+const stkImg = (id, alt = "", set = "blob") => `<img class="stk" src="stickers/${set}/${id}.png" alt="${esc(alt)}" draggable="false" onerror="this.onerror=null;this.src='stickers/blob/${id}.png'">`;
 const coverOf = (e) => (e.cover && STK_IDS.has(e.cover) ? e.cover : e.mood ? `mood-${e.mood}` : null);
 const MAX_STICKERS = 30;
 const pad2 = (n) => String(n).padStart(2, "0");
@@ -206,6 +210,25 @@ function resizeImage(file, max = 1600) {
 const state = { tab: "home", view: S.home, month: new Date(), editing: null, query: "" };
 const app = $("#app");
 
+/* 뒤로가기(폰 back 버튼): 화면 이동을 브라우저 기록에 쌓아서, 앱이 닫히지 않고 이전 화면으로 돌아가게 함 */
+const histDepth = () => (history.state && history.state.d) || 0;
+function navTo(tab) {
+  if (tab === state.tab) return render();
+  const d = histDepth();
+  if (tab === "home") { if (d > 0) history.go(-d); else { state.tab = "home"; render(); } return; }
+  if (state.tab === "home") history.pushState({ tab, d: d + 1 }, "");
+  else if (state.tab === "edit") history.pushState({ tab, d: d + 1 }, "");
+  else history.replaceState({ tab, d }, "");
+  state.tab = tab; render();
+}
+function leaveEditor() { if (histDepth() > 0) history.back(); else { state.tab = "home"; render(); } }
+window.addEventListener("popstate", async (ev) => {
+  if (state.tab === "edit" && state.editing && state.editing.persist) { try { await state.editing.persist(); } catch {} }
+  state.tab = (ev.state && ev.state.tab) || "home";
+  if (state.tab === "edit") state.tab = "home";
+  render();
+});
+
 function render() {
   app.innerHTML = "";
   if (state.tab === "edit") return renderEditor();
@@ -215,7 +238,7 @@ function render() {
     <button data-t="settings"><b>⚙️</b>설정</button></div></nav>`);
   tabs.querySelectorAll("button").forEach((b) => {
     if (b.dataset.t === state.tab) b.classList.add("on");
-    b.onclick = () => { state.tab = b.dataset.t; render(); };
+    b.onclick = () => navTo(b.dataset.t);
   });
   const fn = { home: renderHome, search: renderSearch, settings: renderSettings }[state.tab];
   fn().then(() => app.appendChild(tabs));
@@ -339,6 +362,7 @@ async function openEditor(date) {
   e.stickers = Array.isArray(e.stickers) ? e.stickers : [];
   e.cover = e.cover || "";
   state.editing = { entry: e, original: structuredClone(e), existed: !!ex };
+  history.pushState({ tab: "edit", d: histDepth() + 1 }, "");
   state.tab = "edit"; render();
 }
 
@@ -365,7 +389,7 @@ function renderEditor() {
         <button class="btn" id="sdone">선택 해제</button>
       </div>
       <div class="date-line" style="margin-top:12px">스티커 붙이기 <span class="hint">(누르면 붙어요. 끌어서 옮기고, 두 손가락으로 크기·회전)</span></div>
-      <div class="tray" id="tray">${TRAY.map(([id, n]) => `<button data-id="${id}" aria-label="${n} 스티커 붙이기">${stkImg(id, n, e.set)}</button>`).join("")}</div>
+      <div class="tray" id="tray">${trayFor(e.set).map(([id, n]) => `<button data-id="${id}" aria-label="${n} 스티커 붙이기">${stkImg(id, n, e.set)}</button>`).join("")}</div>
       <div class="photos" id="photos"></div>
       <div class="bar">
         <button class="btn" id="addph">📷 사진 추가</button>
@@ -528,7 +552,8 @@ function renderEditor() {
     ev.target.value = ""; drawPhotos(); persist();
   };
 
-  const leave = async () => { await persist(); state.tab = "home"; render(); };
+  state.editing.persist = persist;
+  const leave = async () => { await persist(); leaveEditor(); };
   $("#back", el).onclick = leave;
   $("#done", el).onclick = leave;
   $("#revert", el).onclick = () => {
@@ -538,7 +563,7 @@ function renderEditor() {
   };
   $("#del", el).onclick = async () => {
     if (!confirm("이 날의 일기를 삭제할까요? 되돌릴 수 없어요. (백업이 있다면 복원할 수 있어요)")) return;
-    clearTimeout(timer); await saving; await dbDel(e.date); state.tab = "home"; render();
+    clearTimeout(timer); await saving; await dbDel(e.date); leaveEditor();
   };
 }
 function renderEditorAgain() { render(); }
@@ -742,6 +767,7 @@ document.addEventListener("visibilitychange", () => {
   try { if ("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js"); } catch {}
   try { db = await openDB(); }
   catch { app.innerHTML = `<main style="padding:24px">이 브라우저에서는 저장소를 열 수 없어요. 시크릿(사생활 보호) 창이 아닌지 확인해 주세요.</main>`; return; }
+  try { history.replaceState({ tab: "home", d: 0 }, ""); } catch {}
   render();
   let unlocked = false;
   try { unlocked = sessionStorage.getItem("diary-unlocked") === "1"; } catch {}
