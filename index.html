@@ -42,7 +42,7 @@ nav.tabs button.on{color:var(--accent)}
   body.printing #print-area{display:block;color:#000;background:#fff}
   #print-area article{break-inside:avoid-page;margin:0 0 28px}
   #print-area .pd{display:flex;align-items:center;gap:8px;font-size:13px;color:#555;border-bottom:1px solid #ccc;padding-bottom:4px}
-  #print-area .pd img.stk{width:28px;height:28px}
+  #print-area .pd img.stk,#print-area .pd .stk.emo{width:28px;height:28px}
   #print-area h2{font-size:18px;margin:10px 0 4px}
   #print-area p{white-space:pre-wrap;line-height:1.7;font-size:14px;margin:6px 0}
   #print-area img.ph{max-width:100%;max-height:300px;display:block;margin:8px 0}
@@ -109,6 +109,10 @@ img.stk{display:block;width:100%;height:100%;object-fit:contain;-webkit-user-dra
 .moods button:not(.on){opacity:.55}
 .canvas{position:relative}
 .layer{position:absolute;inset:0;pointer-events:none;border-radius:10px}
+.stk.emo{display:flex;align-items:center;justify-content:center;width:100%;height:100%;container-type:size;user-select:none;-webkit-user-select:none}
+.stk.emo i{font-style:normal;font-size:78cqmin;line-height:1;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+.tray.grid{flex-wrap:wrap;overflow-x:hidden;overflow-y:auto;max-height:190px}
+.tray button .stk.emo{width:42px;height:42px}
 .fs{position:absolute;pointer-events:auto;touch-action:none;cursor:grab;filter:drop-shadow(0 1px 2px rgba(0,0,0,.18))}
 .fs.sel{outline:2px dashed var(--accent);outline-offset:2px;border-radius:8px}
 .fs .hdl{display:none;position:absolute;right:-4px;bottom:-4px;width:26px;height:26px;border-radius:50%;background:var(--accent);border:2px solid var(--card);cursor:nwse-resize;touch-action:none;box-shadow:0 1px 3px rgba(0,0,0,.3)}
@@ -118,6 +122,9 @@ img.stk{display:block;width:100%;height:100%;object-fit:contain;-webkit-user-dra
 .stbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;padding:8px;background:var(--card);border-radius:10px;border:1px solid var(--line)}
 .stbar[hidden]{display:none}
 .tray{display:flex;gap:6px;overflow-x:auto;padding:8px 2px;margin-top:8px;-webkit-overflow-scrolling:touch}
+.stabs{display:flex;gap:6px;overflow-x:auto;margin-top:6px;-webkit-overflow-scrolling:touch}
+.stabs button{flex:none;border:1px solid var(--line);background:var(--card);color:inherit;border-radius:999px;padding:5px 12px;font-size:13px}
+.stabs button.on{background:var(--accent);color:var(--accent-text);border-color:transparent;font-weight:700}
 .tray button{flex:none;width:52px;height:52px;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:4px}
 </style>
 </head>
@@ -161,13 +168,40 @@ const TRAY = [...MOOD_NAMES.map((n, i) => [`mood-${i + 1}`, n]), ...LIFE.map(([k
 /* 동글이(수채화·만화풍) 전용 감정 스티커 12종 */
 const EMO = [["excited", "신남"], ["love", "사랑스러움"], ["proud", "뿌듯함"], ["flutter", "설렘"], ["calm", "평온"], ["sleepy", "졸림"], ["lazy", "나른함"], ["angry", "화남"], ["anxious", "불안"], ["lonely", "외로움"], ["tired", "지침"], ["tears", "눈물"]].map(([k, n]) => [`emo-${k}`, n]);
 const EMO_SETS = new Set(["blob", "blobwc"]);
-const trayFor = (set) => (EMO_SETS.has(set) ? [...TRAY, ...EMO] : TRAY);
-const STK_IDS = new Set([...TRAY, ...EMO].map((t) => t[0]));
+/* 항목 스티커(날씨·음식 등): 캐릭터와 상관없는 공통 그림. 목록은 .imagen/mkitems.py 가 아래 표시 사이를 채워요 */
+/*ITEMS-START*/
+const ITEM_CATS = [["weather", "날씨", [["weather-sunny", "맑음"], ["weather-cloudy", "흐림"], ["weather-snow", "눈"], ["weather-rain", "비"], ["weather-wind", "바람"], ["weather-thunder", "번개"], ["weather-fog", "안개"], ["weather-rainbow", "무지개"], ["weather-hot", "더위"], ["weather-cold", "추위"]]], ["food", "음식", [["food-rice", "밥"], ["food-soup", "국물"], ["food-noodle", "면"], ["food-meat", "고기"], ["food-chicken", "치킨"], ["food-pizza", "피자"], ["food-bread", "빵"], ["food-dessert", "디저트"], ["food-fruit", "과일"], ["food-tea", "차"], ["food-alcohol", "술"], ["food-snack", "간식"]]], ["work", "일·공부", [["work-study", "공부"], ["work-commute", "출근"], ["work-offwork", "퇴근"], ["work-meeting", "회의"], ["work-task", "업무"], ["work-overtime", "야근"], ["work-exam", "시험"], ["work-homework", "과제"], ["work-reading", "독서"], ["work-writing", "글쓰기"], ["work-interview", "면접"]]], ["home", "집안일", [["home-clean", "청소"], ["home-laundry", "빨래"], ["home-cook", "요리"], ["home-dishes", "설거지"], ["home-grocery", "장보기"], ["home-parcel", "택배"], ["home-shower", "샤워"], ["home-nap", "낮잠"], ["home-stay", "집콕"], ["home-organize", "정리"], ["home-repair", "수리"], ["home-move", "이사"]]], ["sport", "운동", [["sport-run", "달리기"], ["sport-gym", "헬스"], ["sport-yoga", "요가"], ["sport-bike", "자전거"], ["sport-swim", "수영"], ["sport-walk", "산책"], ["sport-hike", "등산"], ["sport-ball", "공놀이"], ["sport-stretch", "스트레칭"]]], ["travel", "이동", [["travel-plane", "비행기"], ["travel-train", "기차"], ["travel-bus", "버스"], ["travel-subway", "지하철"], ["travel-car", "자동차"], ["travel-camp", "캠핑"], ["travel-sea", "바다"], ["travel-hotel", "숙소"], ["travel-photo", "사진"]]], ["people", "사람", [["people-family", "가족"], ["people-friend", "친구"], ["people-lover", "연인"], ["people-date", "데이트"], ["people-gathering", "모임"], ["people-call", "통화"], ["people-gift", "선물"], ["people-talk", "대화"], ["people-cheer", "응원"]]], ["health", "건강", [["health-hospital", "병원"], ["health-pill", "약"], ["health-cold", "감기"], ["health-headache", "두통"], ["health-diet", "다이어트"], ["health-sleep", "숙면"], ["health-insomnia", "불면"], ["health-meditate", "명상"], ["health-massage", "마사지"], ["health-checkup", "건강검진"]]], ["hobby", "취미", [["hobby-movie", "영화"], ["hobby-music", "음악"], ["hobby-game", "게임"], ["hobby-draw", "그림"], ["hobby-concert", "공연"], ["hobby-shopping", "쇼핑"], ["hobby-karaoke", "노래방"], ["hobby-fishing", "낚시"], ["hobby-knitting", "뜨개질"], ["hobby-camera", "사진찍기"], ["hobby-drama", "드라마"], ["hobby-comic", "만화"]]], ["nature", "자연", [["nature-dog", "강아지"], ["nature-cat", "고양이"], ["nature-plant", "화분"], ["nature-flower", "꽃"], ["nature-tree", "나무"], ["nature-star", "별"], ["nature-moon", "달"], ["nature-sunset", "노을"], ["nature-bird", "새"], ["nature-fish", "물고기"]]], ["event", "기념일", [["event-birthday", "생일"], ["event-anniv", "기념일"], ["event-newyear", "새해"], ["event-holiday", "명절"], ["event-xmas", "크리스마스"], ["event-graduation", "졸업"], ["event-wedding", "결혼"], ["event-party", "파티"], ["event-congrats", "축하"], ["event-parents", "어버이날"], ["event-valentine", "발렌타인"], ["event-halloween", "할로윈"]]], ["money", "돈", [["money-salary", "월급"], ["money-saving", "저축"], ["money-spend", "지출"], ["money-sale", "세일"], ["money-card", "카드값"], ["money-allowance", "용돈"]]], ["time", "시간", [["time-morning", "아침"], ["time-lunch", "점심"], ["time-evening", "저녁"], ["time-night", "밤"], ["time-dawn", "새벽"], ["time-weekend", "주말"]]], ["deco", "꾸미기", [["deco-star", "별"], ["deco-ribbon", "리본"], ["deco-bubble", "말풍선"], ["deco-check", "체크"], ["deco-arrow", "화살표"], ["deco-tape", "테이프"], ["deco-sparkle", "반짝"], ["deco-cloud", "구름"], ["deco-exclaim", "느낌표"], ["deco-question", "물음표"]]]];
+/*ITEMS-END*/
+const ITEM_IDS = new Set(ITEM_CATS.flatMap((c) => c[2].map((t) => t[0])));
+const STK_TABS = (set) => [["base", "기본", TRAY], ...(EMO_SETS.has(set) ? [["emo", "감정", EMO]] : []), ...ITEM_CATS, ...EMOJI_CATS];
+const trayFor = (set) => STK_TABS(set).flatMap((t) => t[2]);
+const STK_IDS = new Set([...[...TRAY, ...EMO].map((t) => t[0]), ...ITEM_IDS]);
+/* 이모지 스티커: 폰에 들어있는 이모지를 그대로 붙여요. id는 "e:" + 이모지 글자 */
+const EMOJI_RAW = [
+  ["face", "😀 얼굴", "😀😃😄😁😆😅😂🤣🥲😊😇🙂🙃😉😌😍🥰😘😗😙😚😋😛😝😜🤪🤨🧐🤓😎🥸🤩🥳😏😒😞😔😟😕🙁☹️😣😖😫😩🥺😢😭😤😠😡🤬🤯😳🥵🥶😱😨😰😥😓🤗🤔🫣🤭🫢🤫🫠🤥😶😐😑😬🫨🙄😯😦😧😮😲🥱😴🤤😪😵🤐🥴🤢🤮🤧😷🤒🤕🤑🤠😈👿👹👺🤡💩👻💀☠️👽👾🤖🎃😺😸😹😻😼😽🙀😿😾"],
+  ["hand", "👍 사람", "👋🤚🖐️✋🖖👌🤌🤏✌️🤞🫰🤟🤘🤙👈👉👆👇☝️👍👎✊👊🤛🤜👏🙌🫶👐🤲🤝🙏✍️💅🤳💪🦾🦵🦶👂👃🧠🫀🫁🦷👀👁️👅👄💋👶🧒👦👧🧑👨👩🧓👴👵🙍🙎🙅🙆💁🙋🧏🙇🤦🤷👮🕵️💂👷🤴👸👳👲🧕🤵👰🤰🤱👼🎅🤶🦸🦹🧙🧚🧛🧜🧝🧞🧟💆💇🚶🏃💃🕺👯🧖🧘🛀🛌👭👫👬💏💑👪"],
+  ["heart", "❤️ 마음", "❤️🧡💛💚💙💜🖤🤍🤎💔❤️‍🔥❤️‍🩹❣️💕💞💓💗💖💘💝💟☮️✝️☪️🕉️☯️✨⭐🌟💫⚡🔥💥💢💦💧💤💨🕳️💬💭🗯️💯✔️✅❌❎❓❗‼️⁉️⚠️🚫🔔🔕"],
+  ["animal", "🐶 동물", "🐶🐱🐭🐹🐰🦊🐻🐼🐻‍❄️🐨🐯🦁🐮🐷🐽🐸🐵🙈🙉🙊🐒🐔🐧🐦🐤🐣🐥🦆🦅🦉🦇🐺🐗🐴🦄🐝🪱🐛🦋🐌🐞🐜🪰🪲🦟🦗🕷️🦂🐢🐍🦎🦖🦕🐙🦑🦐🦞🦀🐡🐠🐟🐬🐳🐋🦈🐊🐅🐆🦓🦍🐘🦛🦏🐪🐫🦒🦘🐃🐂🐄🐎🐖🐏🐑🦙🐐🦌🐕🐩🐈🐈‍⬛🐓🦃🦚🦜🦢🦩🕊️🐇🦝🦨🦡🦫🦦🦥🐁🐀🐿️🦔🐾🐉🐲"],
+  ["plant", "🌸 자연", "🌵🎄🌲🌳🌴🪵🌱🌿☘️🍀🎍🪴🎋🍃🍂🍁🍄🌾💐🌷🌹🥀🪻🌺🌸🌼🌻🌞🌝🌛🌜🌚🌕🌖🌗🌘🌑🌒🌓🌔🌙🌎🌍🌏🪐💫⭐🌟✨⚡☄️💥🔥🌪️🌈☀️🌤️⛅🌥️☁️🌦️🌧️⛈️🌩️🌨️❄️☃️⛄🌬️💨💧💦☔☂️🌊🌫️"],
+  ["food", "🍔 음식", "🍏🍎🍐🍊🍋🍌🍉🍇🍓🫐🍈🍒🍑🥭🍍🥥🥝🍅🍆🥑🥦🥬🥒🌶️🫑🌽🥕🧄🧅🥔🍠🥐🥯🍞🥖🥨🧀🥚🍳🧈🥞🧇🥓🥩🍗🍖🌭🍔🍟🍕🥪🥙🧆🌮🌯🥗🥘🍝🍜🍲🍛🍣🍱🥟🍤🍙🍚🍘🍥🥠🥮🍢🍡🍧🍨🍦🥧🧁🍰🎂🍮🍭🍬🍫🍿🍩🍪🌰🥜🍯🥛🍼☕🍵🧃🥤🧋🍶🍺🍻🥂🍷🥃🍸🍹🧉🍾🧊🥄🍴🍽️🥢🧂"],
+  ["act", "⚽ 활동", "⚽🏀🏈⚾🥎🎾🏐🏉🥏🎱🏓🏸🏒🏑🥍🏏🥅⛳🏹🎣🤿🥊🥋🎽🛹🛼🛷⛸️🥌🎿⛷️🏂🏋️🤼🤸⛹️🤺🤾🏌️🏇🧘🏄🏊🤽🚣🧗🚴🚵🏆🥇🥈🥉🏅🎖️🎫🎟️🎪🎭🎨🎬🎤🎧🎼🎹🥁🎷🎺🎸🪕🎻🎲♟️🎯🎳🎮🎰🧩"],
+  ["trip", "🚗 이동·장소", "🚗🚕🚙🚌🚎🏎️🚓🚑🚒🚐🛻🚚🚛🚜🛵🏍️🚲🛴🚨🚔🚍🚘🚖🚡🚠🚟🚃🚋🚞🚝🚄🚅🚈🚂🚆🚇🚊🚉✈️🛫🛬🛩️💺🚁🚀🛸🛶⛵🚤🛥️🛳️⛴️🚢⚓⛽🚧🚦🚥🗺️🗿🗽🗼🏰🏯🏟️🎡🎢🎠⛲⛱️🏖️🏝️🏜️🌋⛰️🏔️🗻🏕️⛺🏠🏡🏘️🏚️🏗️🏢🏬🏣🏤🏥🏦🏨🏪🏫🏩💒🏛️⛪🕌🛕🕍🌃🌆🌇🌉🌌🎑"],
+  ["thing", "💡 사물", "⌚📱💻⌨️🖥️🖨️🖱️💽💾💿📷📸📹🎥📞☎️📺📻🎙️⏰⏱️⏲️🕰️⌛⏳📡🔋🔌💡🔦🕯️🧯💸💵💴💶💷💰💳💎⚖️🧰🔧🔨⚒️🛠️⛏️🔩⚙️🧱🧲🔫💣🧨🪓🔪🗡️🛡️🚬⚰️🔮📿🧿💈⚗️🔭🔬🕳️💊💉🩸🩹🩺🧬🦠🧫🧪🌡️🧹🧺🧻🚽🚰🚿🛁🧼🪥🧽🛒🔑🗝️🚪🪑🛋️🛏️🧸🖼️🛍️🎁🎈🎏🎀🎊🎉🎎🏮🎐✉️📩📨📧💌📦🏷️📪📫📬📭📮📜📃📄📑📊📈📉🗒️🗓️📆📅🗑️📇🗃️🗳️🗄️📋📁📂🗂️📰📓📔📒📕📗📘📙📚📖🔖🧷🔗📎🖇️📐📏🧮📌📍✂️🖊️🖋️✒️🖌️🖍️📝✏️🔍🔎🔏🔐🔒🔓"],
+  ["sym", "🔣 기호", "🔴🟠🟡🟢🔵🟣⚫⚪🟤🔺🔻🔸🔹🔶🔷🔳🔲▪️▫️◾◽◼️◻️⬛⬜🟥🟧🟨🟩🟦🟪🟫♈♉♊♋♌♍♎♏♐♑♒♓⛎🔀🔁🔂▶️⏩⏭️⏯️◀️⏪⏮️🔼⏫🔽⏬⏸️⏹️⏺️🎦🔅🔆📶📳📴♀️♂️⚧️✖️➕➖➗♾️‼️〰️💱💲⚕️♻️⚜️🔱📛🔰⭕✅☑️✔️❌❎➰➿〽️✳️✴️❇️©️®️™️#️⃣*️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣🔟🔠🔡🔢🔤🅰️🆎🅱️🆑🆒🆓ℹ️🆔Ⓜ️🆕🆖🅾️🆗🅿️🆘🆙🆚🈁🈂️🏁🚩🎌🏴🏳️🏳️‍🌈🏴‍☠️🇰🇷"]
+];
+const seg = new Intl.Segmenter();
+const EMOJI_CATS = EMOJI_RAW.map(([k, n, str]) => [`emj-${k}`, n, [...new Set([...seg.segment(str)].map((x) => x.segment))].map((c) => [`e:${c}`, c])]);
+const isEmo = (id) => typeof id === "string" && id.startsWith("e:") && id.length > 2 && id.length <= 24;
+const okId = (id) => STK_IDS.has(id) || isEmo(id);
 const SETS = [["duck", "병아리"], ["penguin", "펭귄"], ["owl", "올빼미(수채화)"], ["blobwc", "노랑 동글이(수채화)"], ["blob", "노랑 동글이(만화풍)"]];
 const SET_IDS = new Set(SETS.map((s) => s[0]));
 const setOf = (e) => (SET_IDS.has(e.set) ? e.set : "blob"); // 캐릭터 기능 이전에 쓴 일기는 노랑 동글이
-const stkImg = (id, alt = "", set = "blob") => `<img class="stk" src="stickers/${set}/${id}.png" alt="${esc(alt)}" draggable="false" onerror="this.onerror=null;this.src='stickers/blob/${id}.png'">`;
-const coverOf = (e) => (e.cover && STK_IDS.has(e.cover) ? e.cover : e.mood ? `mood-${e.mood}` : null);
+const stkImg = (id, alt = "", set = "blob") => isEmo(id)
+  ? `<span class="stk emo" role="img" aria-label="${esc(alt || id.slice(2))}"><i>${esc(id.slice(2))}</i></span>`
+  : ITEM_IDS.has(id)
+  ? `<img class="stk" src="stickers/items/${id}.png" alt="${esc(alt)}" draggable="false">`
+  : `<img class="stk" src="stickers/${set}/${id}.png" alt="${esc(alt)}" draggable="false" onerror="this.onerror=null;this.src='stickers/blob/${id}.png'">`;
+const coverOf = (e) => (e.cover && okId(e.cover) ? e.cover : e.mood ? `mood-${e.mood}` : null);
 const MAX_STICKERS = 30;
 const pad2 = (n) => String(n).padStart(2, "0");
 const ymd = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
@@ -389,7 +423,8 @@ function renderEditor() {
         <button class="btn" id="sdone">선택 해제</button>
       </div>
       <div class="date-line" style="margin-top:12px">스티커 붙이기 <span class="hint">(누르면 붙어요. 끌어서 옮기고, 두 손가락으로 크기·회전)</span></div>
-      <div class="tray" id="tray">${trayFor(e.set).map(([id, n]) => `<button data-id="${id}" aria-label="${n} 스티커 붙이기">${stkImg(id, n, e.set)}</button>`).join("")}</div>
+      <div class="stabs" id="stabs" role="tablist"></div>
+      <div class="tray" id="tray"></div>
       <div class="photos" id="photos"></div>
       <div class="bar">
         <button class="btn" id="addph">📷 사진 추가</button>
@@ -439,7 +474,7 @@ function renderEditor() {
   };
   const drawStickers = () => {
     layer.innerHTML = "";
-    e.stickers = e.stickers.filter((s) => STK_IDS.has(s.id));
+    e.stickers = e.stickers.filter((s) => okId(s.id));
     e.stickers.forEach((s, i) => {
       const n = h(`<div class="fs${i === sel ? " sel" : ""}" role="img" aria-label="스티커">${stkImg(s.id, "", e.set)}${e.cover === s.id ? '<span class="star">⭐</span>' : ""}<span class="hdl" aria-label="끌어서 크기·회전"></span></div>`);
       n.style.aspectRatio = "1";
@@ -525,12 +560,29 @@ function renderEditor() {
   $("#sdel", el).onclick = () => { if (sel < 0) return; e.stickers.splice(sel, 1); sel = -1; drawStickers(); syncBar(); persist(); };
   $("#sdone", el).onclick = () => { sel = -1; drawStickers(); syncBar(); };
   canvas.addEventListener("pointerdown", (ev) => { if (!ev.target.closest(".fs") && sel >= 0) { sel = -1; drawStickers(); syncBar(); } });
-  $("#tray", el).querySelectorAll("button").forEach((b) => (b.onclick = () => {
+  const recentGet = () => { try { return JSON.parse(localStorage.getItem("diary-recent-stk") || "[]").filter((id) => okId(id)); } catch { return []; } };
+  const recentAdd = (id) => { try { localStorage.setItem("diary-recent-stk", JSON.stringify([id, ...recentGet().filter((x) => x !== id)].slice(0, 12))); } catch {} };
+  const nameOf = (id) => (trayFor(e.set).find((t) => t[0] === id) || [id, ""])[1];
+  const tabs = () => { const r = recentGet(); return [...(r.length ? [["recent", "최근", r.map((id) => [id, nameOf(id)])]] : []), ...STK_TABS(e.set)]; };
+  let tab = (() => { try { return localStorage.getItem("diary-stk-tab") || "base"; } catch { return "base"; } })();
+  const drawTray = () => {
+    const all = tabs(); if (!all.some((t) => t[0] === tab)) tab = "base";
+    const sb = $("#stabs", el);
+    sb.innerHTML = all.map(([k, n]) => `<button class="${k === tab ? "on" : ""}" data-k="${k}" role="tab" aria-selected="${k === tab}">${n}</button>`).join("");
+    sb.querySelectorAll("button").forEach((b) => (b.onclick = () => { tab = b.dataset.k; try { localStorage.setItem("diary-stk-tab", tab); } catch {} drawTray(); }));
+    const tr = $("#tray", el);
+    tr.classList.toggle("grid", tab.startsWith("emj-"));
+    tr.innerHTML = all.find((t) => t[0] === tab)[2].map(([id, n]) => `<button data-id="${id}" aria-label="${n} 스티커 붙이기" title="${n}">${stkImg(id, n, e.set)}</button>`).join("");
+    tr.scrollLeft = 0;
+    tr.querySelectorAll("button").forEach((b) => (b.onclick = () => addSticker(b.dataset.id)));
+  };
+  const addSticker = (id) => {
     if (e.stickers.length >= MAX_STICKERS) return alert(`스티커는 한 일기에 ${MAX_STICKERS}개까지 붙일 수 있어요.`);
     const k = e.stickers.length;
-    e.stickers.push({ id: b.dataset.id, x: clamp(0.36 + (k % 4) * 0.04, 0, 0.78), y: 0.04 + (k % 4) * 0.04, s: 0.22 });
-    sel = e.stickers.length - 1; drawStickers(); syncBar(); persist();
-  }));
+    e.stickers.push({ id, x: clamp(0.36 + (k % 4) * 0.04, 0, 0.78), y: 0.04 + (k % 4) * 0.04, s: 0.22 });
+    sel = e.stickers.length - 1; recentAdd(id); drawStickers(); syncBar(); persist(); if (tab !== "recent") drawTray();
+  };
+  drawTray();
   new ResizeObserver(() => layer.querySelectorAll(".fs").forEach((n, i) => place(n, e.stickers[i]))).observe(canvas);
   drawStickers();
 
@@ -679,8 +731,8 @@ async function importBackup(file) {
   const entries = data.entries.filter((e) => e && /^\d{4}-\d{2}-\d{2}$/.test(e.date))
     .map((e) => ({ date: e.date, title: String(e.title || ""), body: String(e.body || ""), mood: Number(e.mood) || 0, photos: Array.isArray(e.photos) ? e.photos : [],
       set: SET_IDS.has(e.set) ? e.set : "blob",
-      cover: STK_IDS.has(e.cover) ? e.cover : "",
-      stickers: (Array.isArray(e.stickers) ? e.stickers : []).filter((s) => s && STK_IDS.has(s.id)).slice(0, MAX_STICKERS)
+      cover: okId(e.cover) ? e.cover : "",
+      stickers: (Array.isArray(e.stickers) ? e.stickers : []).filter((s) => s && okId(s.id)).slice(0, MAX_STICKERS)
         .map((s) => ({ id: s.id, x: Number(s.x) || 0, y: Number(s.y) || 0, s: Math.min(0.6, Math.max(0.08, Number(s.s) || 0.22)), r: Math.max(-180, Math.min(180, Number(s.r) || 0)) })) }));
   const dates = entries.map((e) => e.date).sort();
   const photoN = entries.reduce((n, e) => n + e.photos.length, 0);
