@@ -1,5 +1,5 @@
 /* 일기장 서비스워커: 한 번 열어 두면 인터넷 없이도 열려요. 일기 데이터는 건드리지 않고 화면·그림 파일만 보관해요. */
-const CACHE = "diary-v6";
+const CACHE = "diary-v7";
 const STICKERS = [
  "./stickers/blob/emo-angry.png",
  "./stickers/blob/emo-anxious.png",
@@ -163,6 +163,25 @@ const STICKERS = [
  "./stickers/items/sport-swim.png",
  "./stickers/items/sport-walk.png",
  "./stickers/items/sport-yoga.png",
+ "./stickers/items/stamp-best.png",
+ "./stickers/items/stamp-congrats.png",
+ "./stickers/items/stamp-done.png",
+ "./stickers/items/stamp-envy.png",
+ "./stickers/items/stamp-fight.png",
+ "./stickers/items/stamp-fine.png",
+ "./stickers/items/stamp-fun.png",
+ "./stickers/items/stamp-great.png",
+ "./stickers/items/stamp-happy.png",
+ "./stickers/items/stamp-hard.png",
+ "./stickers/items/stamp-precious.png",
+ "./stickers/items/stamp-rest.png",
+ "./stickers/items/stamp-sad.png",
+ "./stickers/items/stamp-saved.png",
+ "./stickers/items/stamp-secret.png",
+ "./stickers/items/stamp-thanks.png",
+ "./stickers/items/stamp-today.png",
+ "./stickers/items/stamp-tough.png",
+ "./stickers/items/stamp-wow.png",
  "./stickers/items/time-dawn.png",
  "./stickers/items/time-evening.png",
  "./stickers/items/time-lunch.png",
@@ -222,7 +241,26 @@ const STICKERS = [
  "./stickers/penguin/mood-2.png",
  "./stickers/penguin/mood-3.png",
  "./stickers/penguin/mood-4.png",
- "./stickers/penguin/mood-5.png"
+ "./stickers/penguin/mood-5.png",
+ "./stickers/stamps/stamp-best.png",
+ "./stickers/stamps/stamp-congrats.png",
+ "./stickers/stamps/stamp-done.png",
+ "./stickers/stamps/stamp-envy.png",
+ "./stickers/stamps/stamp-fight.png",
+ "./stickers/stamps/stamp-fine.png",
+ "./stickers/stamps/stamp-fun.png",
+ "./stickers/stamps/stamp-great.png",
+ "./stickers/stamps/stamp-happy.png",
+ "./stickers/stamps/stamp-hard.png",
+ "./stickers/stamps/stamp-precious.png",
+ "./stickers/stamps/stamp-rest.png",
+ "./stickers/stamps/stamp-sad.png",
+ "./stickers/stamps/stamp-saved.png",
+ "./stickers/stamps/stamp-secret.png",
+ "./stickers/stamps/stamp-thanks.png",
+ "./stickers/stamps/stamp-today.png",
+ "./stickers/stamps/stamp-tough.png",
+ "./stickers/stamps/stamp-wow.png"
 ];
 const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png"];
 self.addEventListener("install", (e) => {
